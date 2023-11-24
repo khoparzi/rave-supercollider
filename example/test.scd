@@ -48,7 +48,7 @@ currentEnvironment.put(\modelPath, "/path/to/my/rave/model.ts")
 ~synth = {
     var out = Limiter.ar(
         RAVE.new(
-			"/path/to/my/rave/model.ts",
+			~modelPath,
             SoundIn.ar(0), // input for timbre transfer
             \prior.kr(0), // 0 for timbre transfer, 1 for generation
             \temp.kr(1) // temperature of generation
@@ -68,14 +68,19 @@ currentEnvironment.put(\modelPath, "/path/to/my/rave/model.ts")
 // jig to test latency:
 (
 ~synth = {
-	var in = Saw.ar(-1) * Pulse.ar(200)/2;
+	var freq = \jigFreq.kr(200);
+	var env = Saw.ar(\jigRate.kr(-1));
+	var osc1 = Pulse.ar(freq)/4;
+	var osc2 = SinOsc.ar(freq)/4;
+	var in = env * XFade2.ar(osc1, osc2, \jigMix.kr(0));
     var out = RAVE.new(
-		"/path/to/my/rave/model.ts",
+		~modelPath,
 		in, // input for timbre transfer
 		\prior.kr(0), // 0 for timbre transfer, 1 for generation
 		\temp.kr(1) // temperature of generation
 	);
-	Limiter.ar([in, out], 0.2);
+	out = out.blend(in, \jigBlend.kr(0));
+	Limiter.ar(out!2, 0.2);
 }.play(outbus:~bus);
 )
 
@@ -87,7 +92,7 @@ currentEnvironment.put(\modelPath, "/path/to/my/rave/model.ts")
 (
 ~synth = {
 	var z = RAVEEncoder.new(
-		"/path/to/my/rave/model.ts", 8, // filename, latent size
+		~modelPath, 8, // filename, latent size
 		SoundIn.ar(0),// input for latent embedding
 	);
 	z.poll(2,);
