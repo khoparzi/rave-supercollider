@@ -26,6 +26,17 @@ s.quit
 // if macOS complains about unknown binaries:
 ("xattr -d -r com.apple.quarantine"+Platform.userExtensionDir.quote++"/RAVE/").runInTerminal
 
+currentEnvironment.put(\modelPath, "/path/to/my/rave/model.ts")
+(~inSig = {
+	var sig, rmod;
+	sig = SoundIn.ar(0!2);
+	sig = DelayN.ar(sig, 1, \delTime.kr(0.2), 1, 0.9);
+	sig * \amp.kr(0.4)
+}.play(outbus:~bus);
+)
+~inSig.free;
+~inSig.set(\amp, 0);
+~inSig.set(\delTime, 0.1);
 
 // some checkpoints:
 // https://play.forum.ircam.fr/rave-vst-api/get_available_models
@@ -94,13 +105,13 @@ s.quit
 (
 ~synth = {
 	var z = RAVEEncoder.new(
-		"/path/to/my/rave/model.ts", 8, // filename, latent size
+		~modelPath, 8, // filename, latent size
 		SoundIn.ar(0),// input for latent embedding
 	);
 	// z[0].poll(2, \first_latent); z[1].poll(2, \second_latent);
 	Limiter.ar(
 		RAVEDecoder.new(
-        "/path/to/my/rave/model.ts",
+        ~modelPath,
 			[z[0]]++(1-z[1..])
 		)!2
 	);
@@ -116,13 +127,13 @@ s.quit
 (
 ~synth = {
 	var z = RAVEPrior.new(
-		"/path/to/my/rave/model.ts", 8, // filename, latent size
+		~modelPath, 8, // filename, latent size
 		DC.kr(0.2), // prior temperature
 	);
 	// z.poll(2);
 	Limiter.ar(
         RAVEDecoder.new(
-			"/path/to/my/rave/model.ts",
+			~modelPath,
 			z))!2 // latent inputs
 	// [z, z+z.collect{PinkNoise.kr*2-1/3}])) // pseudo-stereo
     ;
@@ -136,7 +147,7 @@ s.quit
 	var z = 36.collect{ |i| ("latent_"++i).asSymbol.kr};
 	Limiter.ar(
         RAVEDecoder.new(
-			"/path/to/my/rave/model.ts",
+			~modelPath,
             z,
         )
     )!2;
@@ -147,7 +158,7 @@ s.quit
 
 
 (
-r = 48000/2048;
+r = s.options.sampleRate/s.options.hardwareBufferSize; // sample rate / buffer size
 b = 0;
 m = 0.1;
 ~set.(\latent_0, {SinOsc.kr(r/4)*2});
@@ -163,7 +174,7 @@ m = 0.1;
 
 (
 n = 8;
-r = 48000/2048;
+r = s.options.sampleRate/s.options.hardwareBufferSize; // sample rate / buffer size
 ~set.(\latent_0, {SinOsc.kr(r/8)*1});
 (n-1).do{ |i|
 	var synth = {SinOsc.kr(r/(n-i).nthPrime/16)*2};
